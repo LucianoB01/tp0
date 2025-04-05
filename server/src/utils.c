@@ -18,11 +18,28 @@ int iniciar_servidor(void)
 
 	getaddrinfo(NULL, PUERTO, &hints, &servinfo);
 
-	// Creamos el socket de escucha del servidor
+	for (p = servinfo; p != NULL; p = p->ai_next)
+	{
+		// Creamos el socket de escucha del servidor
+		socket_servidor = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		if (socket_servidor == -1)
+			continue;
 
-	// Asociamos el socket a un puerto
+		// Asociamos el socket a un puerto
+		if (bind(socket_servidor, p->ai_addr, p->ai_addrlen) == 0)
+			break;
 
+		close(socket_servidor);
+	}
+	
+	if (p == NULL)
+	{
+		log_error(logger, "No se pudo bindear el socket");
+		exit(EXIT_FAILURE);
+	}
+	
 	// Escuchamos las conexiones entrantes
+	listen(socket_servidor, SOMAXCONN);
 
 	freeaddrinfo(servinfo);
 	log_trace(logger, "Listo para escuchar a mi cliente");
@@ -35,8 +52,17 @@ int esperar_cliente(int socket_servidor)
 	// Quitar esta línea cuando hayamos terminado de implementar la funcion
 	assert(!"no implementado!");
 
+	struct sockaddr_in dir_cliente;
+	socklen_t tam_direccion = sizeof(struct sockaddr_in);
+
 	// Aceptamos un nuevo cliente
-	int socket_cliente;
+	int socket_cliente = accept(socket_servidor, (void*)&dir_cliente, &tam_direccion);
+	if (socket_cliente == -1)
+	{
+		log_error(logger, "Fallo al aceptar cliente");
+		exit(EXIT_FAILURE);
+	}
+
 	log_info(logger, "Se conecto un cliente!");
 
 	return socket_cliente;
